@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -230,5 +231,26 @@ func TestUserAgent(t *testing.T) {
 		if !strings.HasPrefix(ua, "meta-mangabaka/") || !strings.Contains(ua, "github.com/panelarr/meta-mangabaka") {
 			t.Fatalf("user agent %q", ua)
 		}
+	}
+}
+
+// A relative download directory must work: SQLite would read the first
+// part of a relative "file:" URI as a host name.
+func TestSyncWithRelativeDownloadDir(t *testing.T) {
+	srv := fixture.NewServer(t)
+	t.Chdir(t.TempDir())
+	p := mangabaka.New()
+	if err := p.Configure(map[string]any{"download_dir": "./data", "dump_url": srv.BaseURL()}); err != nil {
+		t.Fatal(err)
+	}
+	if got := p.Settings().DownloadDir; !filepath.IsAbs(got) {
+		t.Fatalf("download dir not made absolute: %q", got)
+	}
+	var ev events
+	if err := p.Sync(context.Background(), &metadatav1.SyncRequest{Kind: plugin.KindDump}, ev.send); err != nil {
+		t.Fatal(err)
+	}
+	if ev.finished().GetUpserts() != int64(len(fixture.All())-fixture.ExpectedSkipped) {
+		t.Fatalf("finished %v", ev.finished())
 	}
 }

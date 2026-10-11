@@ -120,5 +120,10 @@ func parseSettings(schema *settings.Schema, values map[string]any) (Settings, ma
 	if err := json.Unmarshal(b, &s); err != nil {
 		return Settings{}, nil, fmt.Errorf("settings: %w", err)
 	}
+	// Work with an absolute download directory, so a relative setting
+	// means the same thing everywhere (SQLite URIs, file names in logs).
+	if s.DownloadDir, err = filepath.Abs(s.DownloadDir); err != nil {
+		return Settings{}, nil, fmt.Errorf("settings: download_dir: %w", err)
+	}
 	return s, full, nil
 }

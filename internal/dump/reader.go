@@ -7,6 +7,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite" // pure-Go SQLite driver, no cgo
 )
@@ -24,9 +26,10 @@ type Reader struct {
 
 // Open opens the dump database at path read-only.
 func Open(ctx context.Context, path string) (*Reader, error) {
-	// immutable=1: the file never changes while we read it, so SQLite
-	// skips locking and never writes a journal next to it.
-	dsn := (&url.URL{Scheme: "file", Path: path, RawQuery: "mode=ro&immutable=1"}).String()
+	dsn, err := DSN(path)
+	if err != nil {
+		return nil, err
+	}
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("dump: open: %w", err)
@@ -121,6 +124,24 @@ func (r *Reader) Each(ctx context.Context, fn func(Row) error) error {
 		return fmt.Errorf("dump: read: %w", err)
 	}
 	return nil
+}
+
+// DSN returns the SQLite URI that opens the database at path read-only.
+// The path is made absolute first: in a "file:" URI a relative path such
+// as "data/x.sqlite" would be read as host "data".
+//
+// immutable=1 tells SQLite the file never changes while it is read, so it
+// skips locking and never writes a journal next to it.
+func DSN(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("dump: %w", err)
+	}
+	p := filepath.ToSlash(abs)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p // Windows: C:/x -> /C:/x
+	}
+	return (&url.URL{Scheme: "file", Path: p, RawQuery: "mode=ro&immutable=1"}).String(), nil
 }
 
 // Close closes the database.

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sort"
 	"syscall"
 	"time"
@@ -29,6 +30,12 @@ func runDump(args []string) int {
 	url := fs.String("url", dump.DefaultBaseURL, "dump base URL")
 	keep := fs.Bool("keep", false, "keep the compressed download")
 	_ = fs.Parse(args)
+	absDir, err := filepath.Abs(*dir)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	*dir = absDir
 
 	p := mangabaka.New()
 	if err := p.Configure(map[string]any{
@@ -92,7 +99,7 @@ func runDump(args []string) int {
 		}
 		return nil
 	}
-	err := p.Sync(ctx, &metadatav1.SyncRequest{Kind: plugin.KindDump, Force: true}, send)
+	err = p.Sync(ctx, &metadatav1.SyncRequest{Kind: plugin.KindDump, Force: true}, send)
 	setPhase("")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "dump failed:", err)

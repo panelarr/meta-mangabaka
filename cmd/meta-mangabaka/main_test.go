@@ -62,3 +62,19 @@ func TestDumpCommand(t *testing.T) {
 		}
 	}
 }
+
+// TestDumpCommandRelativeDir runs the dump command with a relative --dir,
+// as `make real-dump DIR=./data` does.
+func TestDumpCommandRelativeDir(t *testing.T) {
+	bin := build(t)
+	srv := fixture.NewServer(t)
+	cmd := exec.Command(bin, "dump", "--dir", "./data", "--url", srv.BaseURL())
+	cmd.Dir = t.TempDir()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("dump: %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "sqlite size") {
+		t.Errorf("output lacks the database size:\n%s", out)
+	}
+}

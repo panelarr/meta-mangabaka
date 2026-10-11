@@ -13,6 +13,12 @@ The `dump` ingestion streams MangaBaka's whole catalogue to meta from its nightl
 
 meta gets `started` first, then progress events for the download, verification and decompression (in bytes), and a `read` progress event whose total is the number of rows.
 
+## Disk space
+
+The default dump is about **400 MB** compressed and decompresses to about **3.3 GB**, and both exist on disk while it is decompressed. Plan for about **3.7 GB** free in `download_dir`. Afterwards only the database stays, unless `keep_downloads` is set, which keeps the compressed file too. The `full` variant is about half as large again (compressed) and much larger decompressed. The numbers grow as MangaBaka grows.
+
+`download_dir` may be relative; it is resolved against the plugin's working directory.
+
 ## Running a real dump by hand
 
 CI never touches MangaBaka. To try the real dump on your machine:
