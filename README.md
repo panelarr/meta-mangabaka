@@ -9,12 +9,64 @@ A metadata plugin for [meta](https://github.com/panelarr/meta), the metadata ser
 
 ## Quick start
 
+meta listens on port **8901**; standalone metadata plugins use **8903** and up.
+
+### Docker
+
+```sh
+docker run -d --name meta-mangabaka \
+  -p 8903:8903 \
+  -e PLUGIN_API_KEY=change-me \
+  -v mangabaka-data:/data \
+  panelarr/meta-mangabaka
+```
+
+The image runs as a non-root user, listens on `:8903`, keeps downloads in the `/data` volume (the dump needs about 3.7 GB, see [docs/dump.md](docs/dump.md#disk-space)) and has a built-in health check.
+
+### Binary
+
 ```sh
 make build
 ./bin/meta-mangabaka --listen :8903 --api-key change-me
 ```
 
-Then add it to meta as a remote provider (`http://<host>:8903` with the same key), or let meta run the binary as a managed plugin. See [docs/configuration.md](docs/configuration.md) for the settings, [docs/dump.md](docs/dump.md) for how the dump ingestion works, [docs/lookup.md](docs/lookup.md) for the API lookups and [docs/mapping.md](docs/mapping.md) for the field mapping.
+### Add it to meta
+
+In meta's configuration (see meta's [configuration docs](https://github.com/panelarr/meta/blob/main/docs/configuration.md)):
+
+```yaml
+providers:
+  - id: mangabaka
+    remote:
+      url: http://meta-mangabaka:8903   # the plugin's address as meta sees it
+      api_key: change-me                # the plugin's PLUGIN_API_KEY
+    settings:
+      dump_variant: default
+    schedules:
+      dump: "0 3 * * *"                 # daily, after MangaBaka builds its dump at 00:00 UTC
+```
+
+Or let meta start the binary itself (managed mode); no listen address or key is needed then:
+
+```yaml
+providers:
+  - id: mangabaka
+    managed:
+      path: /plugins/meta-mangabaka
+    settings:
+      download_dir: /data/mangabaka
+    schedules:
+      dump: "0 3 * * *"
+```
+
+Then run a first sync from meta (`meta sync mangabaka`, or `POST /v1/admin/providers/mangabaka/sync`).
+
+## Documentation
+
+- [Running the plugin](docs/running.md): standalone or managed, the image, volumes, health, upgrades
+- [Configuration](docs/configuration.md): settings and environment variables
+- [Dump ingestion](docs/dump.md) and [API lookups](docs/lookup.md)
+- [Field mapping](docs/mapping.md) from MangaBaka to meta's entry schema
 
 ## MangaBaka data and its licence
 

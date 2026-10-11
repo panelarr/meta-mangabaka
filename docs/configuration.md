@@ -7,7 +7,7 @@
 | **Standalone** | `meta-mangabaka --listen :8903 --api-key KEY` (or `PLUGIN_LISTEN`, `PLUGIN_API_KEY`). Run by hand with no flags, it listens on `:8903`. Add it to meta as a remote provider by URL and key |
 | **Managed** | meta starts the binary itself; nothing to configure here |
 
-`GET /healthz` answers without a key, for container health checks.
+`GET /healthz` answers without a key, for container health checks; `meta-mangabaka healthcheck [--url URL]` probes it and exits non-zero when it fails. See [running.md](running.md) for the container image.
 
 ## Settings
 
@@ -29,8 +29,9 @@ meta shows these as a form (the plugin publishes a JSON Schema) and sends them t
 
 | Variable | What |
 |---|---|
-| `MANGABAKA_DOWNLOAD_DIR` | Default for `download_dir` |
-| `PLUGIN_LISTEN`, `PLUGIN_API_KEY` | Standalone address and API key |
+| `MANGABAKA_DOWNLOAD_DIR` | Default for `download_dir`. The container image sets it to `/data` |
+| `PLUGIN_LISTEN` | Standalone address, e.g. `:8903` (the `--listen` flag wins). The container image sets `:8903` |
+| `PLUGIN_API_KEY` | Key callers must send as `Authorization: Bearer <key>` in standalone mode (the `--api-key` flag wins) |
 | `HTTPS_PROXY`, `NO_PROXY` | Standard proxy settings for downloads and API calls |
 
 ## Schedule

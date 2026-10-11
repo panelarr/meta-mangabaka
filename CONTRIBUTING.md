@@ -15,6 +15,7 @@ cd meta-mangabaka
 make setup   # installs pinned tools (golangci-lint, govulncheck) into ./bin
 make check   # format check, vet, lint, govulncheck and tests: run this before every PR
 make help    # lists every target
+make docker  # builds the image, passing ../meta as a named build context
 ```
 
 ### No MangaBaka data in this repo

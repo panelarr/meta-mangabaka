@@ -2,6 +2,7 @@
 
 | Doc | What it covers |
 |---|---|
+| [running.md](running.md) | Standalone or managed, the container image, volumes, health, upgrades |
 | [configuration.md](configuration.md) | Run modes, settings, environment, schedule |
 | [dump.md](dump.md) | How the dump ingestion works, and running a real dump by hand |
 | [lookup.md](lookup.md) | Searches and single-series lookups through the API: endpoints, rate limits, back-off |
