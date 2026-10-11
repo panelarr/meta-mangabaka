@@ -4,7 +4,8 @@
 //
 // Run it standalone with --listen (default :8903), let meta start it as a
 // managed plugin, or use the "dump" subcommand to download and read a dump
-// once and print statistics.
+// once and print statistics. "healthcheck" probes a running instance, for
+// container health checks.
 package main
 
 import (
@@ -25,6 +26,8 @@ func main() {
 			return
 		case "dump":
 			os.Exit(runDump(os.Args[2:]))
+		case "healthcheck":
+			os.Exit(runHealthcheck(os.Args[2:], os.Stderr))
 		}
 	}
 	plugin.Main(mangabaka.New(), plugin.WithDefaultListen(":8903"))

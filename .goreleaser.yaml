@@ -1,0 +1,72 @@
+# GoReleaser builds the release artifacts when release-please tags a
+# version: binaries, archives, checksums, SBOMs and multi-arch images.
+# The meta checkout must sit next to this repo (go.mod replaces it until
+# meta is tagged); the release workflow arranges that.
+version: 2
+project_name: meta-mangabaka
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: meta-mangabaka
+    main: ./cmd/meta-mangabaka
+    binary: meta-mangabaka
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/panelarr/meta-mangabaka/internal/buildinfo.Version={{ .Version }}
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - docs/*
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - artifacts: archive
+
+dockers_v2:
+  - id: image
+    ids: [meta-mangabaka]
+    dockerfile: Dockerfile.release
+    images:
+      - panelarr/meta-mangabaka
+    tags:
+      - "{{ .Version }}"
+      - "{{ .Major }}.{{ .Minor }}"
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    extra_files:
+      - packaging/data
+    labels:
+      org.opencontainers.image.title: meta-mangabaka
+      org.opencontainers.image.description: MangaBaka metadata plugin for meta (Panelarr)
+      org.opencontainers.image.source: https://github.com/panelarr/meta-mangabaka
+      org.opencontainers.image.licenses: GPL-3.0-or-later
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+
+# release-please writes the changelog and creates the GitHub release;
+# GoReleaser adds the artifacts to it.
+changelog:
+  disable: true
+
+release:
+  mode: append

@@ -60,8 +60,11 @@ real-dump: build ## Download and read the real MangaBaka dump once into DIR and 
 	@test -n "$(DIR)" || (echo "usage: make real-dump DIR=/path/with/space [VARIANT=default]" && exit 2)
 	$(BIN)/meta-mangabaka dump --dir "$(DIR)" --variant "$(or $(VARIANT),default)"
 
-docker: ## Build the container image ($(IMAGE))
-	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE) .
+META_DIR ?= ../meta
+
+docker: ## Build the container image ($(IMAGE)); needs the meta checkout in META_DIR (default ../meta)
+	@test -f "$(META_DIR)/go.mod" || (echo "meta checkout not found at $(META_DIR); clone it next to this repo or set META_DIR" && exit 2)
+	docker build --build-context meta=$(META_DIR) --build-arg VERSION=$(VERSION) -t $(IMAGE) .
 
 clean: ## Remove build artifacts (keeps installed tools)
 	rm -f $(BIN)/meta-mangabaka

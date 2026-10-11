@@ -1,0 +1,14 @@
+# Image built by GoReleaser from the release binaries (see .goreleaser.yaml).
+# For local builds use the Dockerfile (`make docker`).
+FROM gcr.io/distroless/static-debian12:nonroot
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/meta-mangabaka /meta-mangabaka
+COPY --chown=65532:65532 packaging/data /data
+ENV MANGABAKA_DOWNLOAD_DIR=/data \
+    PLUGIN_LISTEN=:8903
+VOLUME ["/data"]
+EXPOSE 8903
+USER 65532:65532
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD ["/meta-mangabaka", "healthcheck"]
+ENTRYPOINT ["/meta-mangabaka"]
