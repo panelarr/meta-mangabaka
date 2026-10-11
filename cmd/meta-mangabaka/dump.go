@@ -78,7 +78,7 @@ func runDump(args []string) int {
 			}
 			if time.Since(lastPrint) > 5*time.Second {
 				lastPrint = time.Now()
-				fmt.Fprintf(os.Stderr, "%s: %d / %d bytes\n", e.Progress.GetPhase(), e.Progress.GetDone(), e.Progress.GetTotal())
+				fmt.Fprintf(os.Stderr, "%s: %d / %d %s\n", e.Progress.GetPhase(), e.Progress.GetDone(), e.Progress.GetTotal(), e.Progress.GetUnit())
 			}
 		case *metadatav1.SyncResponse_Upsert:
 			events["upserts"]++
