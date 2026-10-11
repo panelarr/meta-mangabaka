@@ -353,3 +353,51 @@ func TestEveryGeneratedRowMaps(t *testing.T) {
 		}
 	}
 }
+
+// A tags_v2 node "Settings > Fantasy" is a tag under Settings, not the genre
+// Fantasy, and genres keep the order of the genre list.
+func TestTagsWithGenreNamesStayTags(t *testing.T) {
+	row := mapping.Row{
+		"id":     int64(900),
+		"title":  "A Quiet Bird",
+		"state":  "active",
+		"genres": `["drama","psychological","slice_of_life"]`,
+		"tags_v2": `[
+			{"id": 5, "name": "Fantasy", "is_genre": false, "name_path": "Settings > Fantasy", "level": 1, "weight": "incidental"},
+			{"id": 6, "name": "Supernatural", "is_genre": false, "name_path": "Settings > Supernatural"},
+			{"id": 7, "name": "Psychological", "is_genre": true, "name_path": "Psychological", "weight": "core"},
+			{"id": 8, "name": "Comedy", "is_genre": false, "name_path": "Themes > Comedy"}
+		]`,
+	}
+	res, err := mapping.Series(row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type tg struct {
+		name, path string
+		genre      bool
+	}
+	var got []tg
+	for _, a := range res.Entry.GetTags() {
+		got = append(got, tg{a.GetTag().GetName(), strings.Join(a.GetTag().GetPath(), " > "), a.GetTag().GetIsGenre()})
+	}
+	want := []tg{
+		{"Drama", "", true},
+		{"Psychological", "", true}, // merged with the tags_v2 genre node
+		{"Slice of Life", "", true},
+		{"Fantasy", "Settings", false},
+		{"Supernatural", "Settings", false},
+		{"Comedy", "Themes", false},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("tags: %v", got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("tag %d: got %v, want %v (all: %v)", i, got[i], want[i], got)
+		}
+	}
+	if w := res.Entry.GetTags()[1].GetWeight(); w != metadatav1.TagWeight_TAG_WEIGHT_CORE {
+		t.Fatalf("the genre node's weight was lost: %v", w)
+	}
+}

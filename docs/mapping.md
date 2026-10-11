@@ -18,8 +18,8 @@ Each row of the dump's `series` table becomes one `ProviderEntry` with provider 
 | `authors[]`, `artists[]` | credits (author, artist) | Plain names: persons without IDs |
 | `publishers[]` | company credits | Type `Original` → original publisher, others → publisher, raw type kept; the publisher ID becomes the external ID `mangabaka:publisher/<id>` |
 | `is_licensed` | `licenses` (`en`) | Read as English licensing |
-| `tags_v2[]` | tags | Name, description, parent (by `parent_id`, else from `name_path`), level, implied-by, genre and explicit flags, content rating, series count, weight; tag ID → `mangabaka:tag/<id>`. The spoiler flag is set on the assignment |
-| `genres[]` | tags with `is_genre` | Added when `tags_v2` lacks them (`slice_of_life` → "Slice of Life") |
+| `genres[]` | tags with `is_genre`, first and in this order | `slice_of_life` → "Slice of Life". A `tags_v2` genre node of the same name adds its details |
+| `tags_v2[]` | tags | Name, description, parent (by `parent_id`, else from `name_path`), `path` (the parents' names from `name_path`, root first), level, implied-by, genre and explicit flags, content rating, series count, weight; tag ID → `mangabaka:tag/<id>`. The spoiler flag is set on the assignment. Genre nodes missing from `genres[]` follow the genres; the other nodes stay tags even when they share a genre's name ("Settings › Fantasy" is not the genre "Fantasy") |
 | `tags[]` | tags | Only when there are no `tags_v2` |
 | `links_v2[]` | links | retailer → store, publisher → publisher, webplatform → read, info → database, social → social, news → news, other → other. **Links typed `piracy` are dropped.** The untyped `links[]` list is not used |
 | `relationships_v2[]` | relations | Relation type, chronology, manual flag, note; target `mangabaka:<id>`. The older `relationships_<kind>` columns are used only when there are no v2 relations |

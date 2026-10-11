@@ -475,8 +475,11 @@ func genreName(key string) string {
 	return strings.Join(words, " ")
 }
 
-// tags maps tags_v2 (hierarchical, flagged), then adds v1 genres that
-// tags_v2 lacks, and uses v1 tags only when there are no tags_v2.
+// tags maps the series' genres and tags. Genres come first, in the order
+// of the `genres` list (the provider's order), merged with the matching
+// tags_v2 genre nodes; then the remaining tags_v2 nodes, each with its path
+// ("Settings > Fantasy" is a tag named Fantasy under Settings, not the genre
+// Fantasy). The v1 `tags` list is used only when there are no tags_v2.
 func tags(r Row) []*metadatav1.TagAssignment {
 	var list []mbTag
 	r.json("tags_v2", &list)
@@ -486,56 +489,118 @@ func tags(r Row) []*metadatav1.TagAssignment {
 			names[t.ID.v] = strings.TrimSpace(t.Name)
 		}
 	}
+	// Genre nodes of tags_v2 by name, to merge with the genre list.
+	genreNodes := map[string]mbTag{}
+	for _, t := range list {
+		if t.IsGenre {
+			genreNodes[tagKey(t.Name)] = t
+		}
+	}
 	seen := map[string]bool{}
 	var out []*metadatav1.TagAssignment
-	for _, t := range list {
-		name := strings.TrimSpace(t.Name)
-		if name == "" || seen[tagKey(name)] {
-			continue
+	addGenre := func(name string, node *mbTag) {
+		key := "genre/" + tagKey(name)
+		if name == "" || seen[key] {
+			return
 		}
-		seen[tagKey(name)] = true
-		tag := &metadatav1.Tag{
-			Name:          name,
-			Description:   deref(t.Description),
-			Level:         t.Level,
-			IsGenre:       t.IsGenre,
-			IsExplicit:    t.IsExplicit,
-			ContentRating: contentRating(t.ContentRating),
-			EntryCount:    t.SeriesCount,
-			Parent:        tagParent(t, names),
+		seen[key] = true
+		if node == nil {
+			out = append(out, &metadatav1.TagAssignment{Tag: &metadatav1.Tag{Name: name, IsGenre: true}})
+			return
 		}
-		for _, id := range t.ImpliedByTagIDs {
-			if n, ok := names[id.v]; ok && id.ok {
-				tag.ImpliedBy = append(tag.ImpliedBy, n)
-			}
-		}
-		if t.ID.ok {
-			tag.ExternalIds = []*metadatav1.ExternalId{{Provider: Provider, Id: "tag/" + strconv.FormatInt(t.ID.v, 10)}}
-		}
-		out = append(out, &metadatav1.TagAssignment{
-			Tag:       tag,
-			Weight:    tagWeight(t.Weight),
-			RawWeight: t.Weight,
-			IsSpoiler: t.IsSpoiler != nil && *t.IsSpoiler,
-		})
+		a := assignment(*node, names)
+		a.Tag.Name, a.Tag.IsGenre, a.Tag.Path, a.Tag.Parent = name, true, nil, ""
+		out = append(out, a)
 	}
 	for _, g := range r.strings("genres") {
-		if seen[tagKey(g)] {
+		if node, ok := genreNodes[tagKey(g)]; ok {
+			addGenre(strings.TrimSpace(node.Name), &node)
 			continue
 		}
-		seen[tagKey(g)] = true
-		out = append(out, &metadatav1.TagAssignment{Tag: &metadatav1.Tag{Name: genreName(g), IsGenre: true}})
+		addGenre(genreName(g), nil)
+	}
+	for _, t := range list {
+		if t.IsGenre {
+			addGenre(strings.TrimSpace(t.Name), &t)
+		}
+	}
+	for _, t := range list {
+		name := strings.TrimSpace(t.Name)
+		if t.IsGenre || name == "" {
+			continue
+		}
+		a := assignment(t, names)
+		key := "tag/" + strings.Join(append(lowerAll(a.Tag.Path), tagKey(name)), "/")
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, a)
 	}
 	if len(list) == 0 {
 		for _, t := range r.strings("tags") {
-			if seen[tagKey(t)] {
+			key := "tag/" + tagKey(t)
+			if seen[key] {
 				continue
 			}
-			seen[tagKey(t)] = true
+			seen[key] = true
 			out = append(out, &metadatav1.TagAssignment{Tag: &metadatav1.Tag{Name: t}})
 		}
 	}
 	return out
+}
+
+func lowerAll(ss []string) []string {
+	out := make([]string, len(ss))
+	for i, s := range ss {
+		out[i] = tagKey(s)
+	}
+	return out
+}
+
+// assignment maps one tags_v2 node.
+func assignment(t mbTag, names map[int64]string) *metadatav1.TagAssignment {
+	name := strings.TrimSpace(t.Name)
+	tag := &metadatav1.Tag{
+		Name:          name,
+		Description:   deref(t.Description),
+		Level:         t.Level,
+		IsGenre:       t.IsGenre,
+		IsExplicit:    t.IsExplicit,
+		ContentRating: contentRating(t.ContentRating),
+		EntryCount:    t.SeriesCount,
+		Parent:        tagParent(t, names),
+		Path:          tagPath(t),
+	}
+	for _, id := range t.ImpliedByTagIDs {
+		if n, ok := names[id.v]; ok && id.ok {
+			tag.ImpliedBy = append(tag.ImpliedBy, n)
+		}
+	}
+	if t.ID.ok {
+		tag.ExternalIds = []*metadatav1.ExternalId{{Provider: Provider, Id: "tag/" + strconv.FormatInt(t.ID.v, 10)}}
+	}
+	return &metadatav1.TagAssignment{
+		Tag:       tag,
+		Weight:    tagWeight(t.Weight),
+		RawWeight: t.Weight,
+		IsSpoiler: t.IsSpoiler != nil && *t.IsSpoiler,
+	}
+}
+
+// tagPath returns a tag's ancestors from name_path ("A > B > C" gives
+// [A, B] for tag C; paths that list only the ancestors are kept whole).
+func tagPath(t mbTag) []string {
+	var parts []string
+	for _, p := range strings.Split(t.NamePath, ">") {
+		if p = strings.TrimSpace(p); p != "" {
+			parts = append(parts, p)
+		}
+	}
+	if len(parts) > 0 && strings.EqualFold(parts[len(parts)-1], strings.TrimSpace(t.Name)) {
+		parts = parts[:len(parts)-1]
+	}
+	return parts
 }
 
 // tagParent finds a tag's parent: by ID among the record's tags, or else
