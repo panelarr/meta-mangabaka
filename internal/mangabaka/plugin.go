@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"sync"
@@ -62,6 +63,9 @@ func New() *Plugin {
 		// No overall timeout: a dump download takes minutes. Cancellation
 		// comes from the sync's context.
 		ReadTimeout: 60 * time.Second,
+		// Log when a profile is applied and when a site answers with a
+		// challenge, on stderr like the rest of the plugin.
+		Log: slog.Default(),
 	})
 	p := &Plugin{schema: newSchema(), net: net, HTTP: net.HTTP()}
 	s, values, err := parseSettings(p.schema, nil)
