@@ -31,5 +31,5 @@ Your operator gives you a list of aliases for confidential names (a local file, 
 
 - **Progress:** tracked in meta's `PROGRESS.md` (both repos). Re-read it whenever you lose context.
 - **SDK:** comes from the sibling `../meta` checkout through a `replace` directive until meta is tagged.
-- **No MangaBaka data.** Never commit the dump, extracts or real records. Tests use the synthetic fixture built in code.
+- **No MangaBaka data.** Never commit the dump, extracts or real records. Tests use the synthetic fixture in `internal/fixture`, built in code (made-up series in the dump's table layout).
 - **Respect the upstream:** keep the documented API rate limits, send a clear User-Agent, keep attribution on every record.

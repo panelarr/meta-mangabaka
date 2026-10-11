@@ -14,7 +14,7 @@ VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev
 LDFLAGS  := -s -w -X github.com/panelarr/meta-mangabaka/internal/buildinfo.Version=$(VERSION)
 IMAGE    ?= panelarr/meta-mangabaka:dev
 
-.PHONY: help setup build test test-short lint fmt fmt-check vet vuln gen run docker clean check
+.PHONY: help setup build test test-short lint fmt fmt-check vet vuln gen run real-dump docker clean check
 
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_.-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -52,9 +52,13 @@ vuln: ## Check dependencies and the toolchain for known vulnerabilities
 gen: ## Generate code (nothing generated in this repo yet)
 	@true
 
-run: build ## Run the plugin standalone on :7070 and print its URL
-	@echo "meta-mangabaka listening on http://localhost:7070"
-	$(BIN)/meta-mangabaka --listen :7070
+run: build ## Run the plugin standalone on :8903 and print its URL
+	@echo "meta-mangabaka listening on http://localhost:8903"
+	$(BIN)/meta-mangabaka --listen :8903
+
+real-dump: build ## Download and read the real MangaBaka dump once into DIR and print statistics (manual, not in CI)
+	@test -n "$(DIR)" || (echo "usage: make real-dump DIR=/path/with/space [VARIANT=default]" && exit 2)
+	$(BIN)/meta-mangabaka dump --dir "$(DIR)" --variant "$(or $(VARIANT),default)"
 
 docker: ## Build the container image ($(IMAGE))
 	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE) .
