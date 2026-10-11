@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, test, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: meta-mangabaka
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: meta-mangabaka
+
+      # Until meta publishes tagged versions, go.mod points at a sibling meta
+      # checkout with a replace directive.
+      - uses: actions/checkout@v5
+        with:
+          repository: panelarr/meta
+          ref: main
+          path: meta
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: meta-mangabaka/go.mod
+          cache-dependency-path: meta-mangabaka/go.sum
+
+      - name: Cache tools
+        uses: actions/cache@v4
+        with:
+          path: meta-mangabaka/bin
+          key: tools-${{ runner.os }}-${{ hashFiles('meta-mangabaka/Makefile', 'meta-mangabaka/go.mod') }}
+
+      - name: Install tools
+        run: make setup
+
+      - name: Check (format, vet, lint, govulncheck, tests)
+        run: make check
+
+      - name: Build
+        run: make build
