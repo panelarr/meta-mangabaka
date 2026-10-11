@@ -48,6 +48,7 @@ const (
 	GeneratedFirst  = 1000
 	GeneratedCount  = 24
 	PiracyURL       = "https://unlicensed-copies.example/read/101"
+	KitsuOnMerged   = 7777
 	ExpectedSkipped = 1
 )
 
@@ -120,6 +121,9 @@ func All() []Series {
 		{
 			"id": IDMergedText, "state": "merged", "merged_with": "101", "title": "Clockwork Garden (duplicate)",
 			"type": "manga", "status": "completed", "content_rating": "safe",
+			// Only this merged record carries the Kitsu ID: a lookup by it
+			// must follow the merge to IDFull.
+			"source_kitsu_id": KitsuOnMerged,
 		},
 		{"id": IDDeleted, "state": "deleted", "title": "Removed Entry", "type": "manga", "status": "unknown"},
 		{"id": IDNoTitle, "state": "active", "titles": "[]", "type": "manga"},

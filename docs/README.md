@@ -4,6 +4,7 @@
 |---|---|
 | [configuration.md](configuration.md) | Run modes, settings, environment, schedule |
 | [dump.md](dump.md) | How the dump ingestion works, and running a real dump by hand |
+| [lookup.md](lookup.md) | Searches and single-series lookups through the API: endpoints, rate limits, back-off |
 | [mapping.md](mapping.md) | How MangaBaka fields map to meta's entry schema |
 
 The plugin protocol and the entry schema are documented in [meta](https://github.com/panelarr/meta/tree/main/docs).

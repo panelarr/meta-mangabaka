@@ -20,6 +20,7 @@ import (
 	"github.com/panelarr/meta/sdk/plugin"
 	"github.com/panelarr/meta/sdk/settings"
 
+	"github.com/panelarr/meta-mangabaka/internal/api"
 	"github.com/panelarr/meta-mangabaka/internal/buildinfo"
 	"github.com/panelarr/meta-mangabaka/internal/dump"
 	"github.com/panelarr/meta-mangabaka/internal/mapping"
@@ -38,9 +39,14 @@ type Plugin struct {
 	// HTTP is used for downloads; tests replace it.
 	HTTP *http.Client
 
+	// APIHook, if set, adjusts each new API client (tests use it to fake
+	// time and loosen limits).
+	APIHook func(*api.Client)
+
 	mu       sync.Mutex
 	settings Settings
 	values   map[string]any
+	api      *api.Client
 
 	syncing sync.Mutex
 }
@@ -79,9 +85,32 @@ func (p *Plugin) Configure(values map[string]any) error {
 		return err
 	}
 	p.mu.Lock()
+	defer p.mu.Unlock()
+	// Keep the API client (and its rate buckets) unless what it depends on
+	// changed: re-applying the same settings must not reset the limits.
+	old := p.settings
+	if p.api == nil || old.APIURL != s.APIURL || old.APISearchPerMinute != s.APISearchPerMinute ||
+		old.APIGetPerMinute != s.APIGetPerMinute || old.APITimeoutSeconds != s.APITimeoutSeconds {
+		p.api = nil
+	}
 	p.settings, p.values = s, full
-	p.mu.Unlock()
 	return nil
+}
+
+// apiClient returns the API client for the current settings.
+func (p *Plugin) apiClient() *api.Client {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.api == nil {
+		s := p.settings
+		c := api.New(s.APIURL, UserAgent(), p.HTTP, s.APISearchPerMinute, s.APIGetPerMinute)
+		c.Timeout = time.Duration(s.APITimeoutSeconds) * time.Second
+		if p.APIHook != nil {
+			p.APIHook(c)
+		}
+		p.api = c
+	}
+	return p.api
 }
 
 func (p *Plugin) GetInfo(context.Context, *metadatav1.GetInfoRequest) (*metadatav1.GetInfoResponse, error) {
@@ -89,7 +118,7 @@ func (p *Plugin) GetInfo(context.Context, *metadatav1.GetInfoRequest) (*metadata
 		Id:          mapping.Provider,
 		Name:        "MangaBaka",
 		Version:     buildinfo.Version,
-		Description: "Manga, manhwa and manhua metadata from MangaBaka's nightly database dump, with cross-references to many other sites.",
+		Description: "Manga, manhwa and manhua metadata from MangaBaka: the nightly database dump for the whole catalogue, and the API for searches and fresh single records. Cross-references many other sites.",
 		Homepage:    "https://github.com/panelarr/meta-mangabaka",
 		Provider:    mapping.Provider,
 		Protocols:   []string{plugin.Protocol},
@@ -106,10 +135,23 @@ func (p *Plugin) GetInfo(context.Context, *metadatav1.GetInfoRequest) (*metadata
 			},
 			ScheduleHint: "0 3 * * *",
 			FullSnapshot: true,
+		}, {
+			Kind:        plugin.KindLookup,
+			Description: "Searches and fetches single series through MangaBaka's API, also by AniList, MyAnimeList, MangaUpdates, Kitsu and Anime-Planet IDs.",
+			// MangaBaka's published per-IP limits. The plugin keeps to them
+			// itself as well.
+			Limits: &metadatav1.Limits{
+				MaxConcurrency: 4,
+				RateLimits: []*metadatav1.RateLimit{
+					{Operation: "search", Requests: api.SearchPerMinute, Per: durationpb.New(time.Minute)},
+					{Operation: "get", Requests: api.GetPerMinute, Per: durationpb.New(time.Minute)},
+				},
+			},
 		}},
 		Capabilities: []string{
 			"titles", "descriptions", "people", "companies", "tags", "covers",
 			"relations", "adaptations", "links", "external_ids", "stats",
+			"lookup_by_external_id",
 		},
 		CommonServices: []*metadatav1.CommonService{{
 			Name:    "network_profile",

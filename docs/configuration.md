@@ -16,9 +16,12 @@ meta shows these as a form (the plugin publishes a JSON Schema) and sends them t
 | Setting | Default | What |
 |---|---|---|
 | `dump_variant` | `default` | `default` or `full`. The full dump adds every source site's raw response; meta doesn't need it and it is much larger |
-| `download_dir` | `$MANGABAKA_DOWNLOAD_DIR`, else `<user cache dir>/meta-mangabaka` | Where the dump is downloaded and decompressed. Needs a few GB free |
+| `download_dir` | `$MANGABAKA_DOWNLOAD_DIR`, else `<user cache dir>/meta-mangabaka` | Where the dump is downloaded and decompressed. Needs about 3.7 GB free ([dump.md](dump.md#disk-space)). A relative path is resolved against the plugin's working directory |
 | `dump_url` | `https://api.mangabaka.org/v1/database` | The directory the dump files are published in. Change it only for a mirror |
-| `api_url` | `https://api.mangabaka.org` | MangaBaka's API, for lookups |
+| `api_url` | `https://api.mangabaka.org` | MangaBaka's API, for searches and single-series lookups ([lookup.md](lookup.md)) |
+| `api_search_per_minute` | `30` | Searches a minute, at most MangaBaka's limit of 30. Lower it if other MangaBaka clients share your IP |
+| `api_get_per_minute` | `180` | Other API requests a minute, at most MangaBaka's limit of 180 |
+| `api_timeout_seconds` | `30` | How long to wait for one API response |
 | `checkpoint_every` | `1000` | Records between checkpoints, where meta commits a sync's progress |
 | `keep_downloads` | `false` | Keep the compressed dump after decompressing it |
 
@@ -28,7 +31,7 @@ meta shows these as a form (the plugin publishes a JSON Schema) and sends them t
 |---|---|
 | `MANGABAKA_DOWNLOAD_DIR` | Default for `download_dir` |
 | `PLUGIN_LISTEN`, `PLUGIN_API_KEY` | Standalone address and API key |
-| `HTTPS_PROXY`, `NO_PROXY` | Standard proxy settings for downloads |
+| `HTTPS_PROXY`, `NO_PROXY` | Standard proxy settings for downloads and API calls |
 
 ## Schedule
 

@@ -10,11 +10,12 @@ import (
 
 	"github.com/panelarr/meta/sdk/settings"
 
+	"github.com/panelarr/meta-mangabaka/internal/api"
 	"github.com/panelarr/meta-mangabaka/internal/dump"
 )
 
 // DefaultAPIURL is MangaBaka's API.
-const DefaultAPIURL = "https://api.mangabaka.org"
+const DefaultAPIURL = api.DefaultBaseURL
 
 // Settings are the plugin's settings. meta stores them and sends them with
 // SetSettings.
@@ -25,6 +26,11 @@ type Settings struct {
 	APIURL          string `json:"api_url"`
 	CheckpointEvery int64  `json:"checkpoint_every"`
 	KeepDownloads   bool   `json:"keep_downloads"`
+	// API limits per minute; lower than MangaBaka's published limits if the
+	// hoster shares the IP with other MangaBaka clients.
+	APISearchPerMinute int `json:"api_search_per_minute"`
+	APIGetPerMinute    int `json:"api_get_per_minute"`
+	APITimeoutSeconds  int `json:"api_timeout_seconds"`
 }
 
 // DefaultDownloadDir is $MANGABAKA_DOWNLOAD_DIR, or a directory in the
@@ -73,7 +79,31 @@ func schemaDoc() string {
 				"format":      "uri",
 				"default":     DefaultAPIURL,
 				"title":       "API URL",
-				"description": "MangaBaka's API, used for lookups.",
+				"description": "MangaBaka's API, used for searches and single-series lookups.",
+			},
+			"api_search_per_minute": map[string]any{
+				"type":        "integer",
+				"minimum":     1,
+				"maximum":     api.SearchPerMinute,
+				"default":     api.SearchPerMinute,
+				"title":       "API searches per minute",
+				"description": "MangaBaka allows 30 searches a minute per IP. Lower it if other MangaBaka clients share your IP.",
+			},
+			"api_get_per_minute": map[string]any{
+				"type":        "integer",
+				"minimum":     1,
+				"maximum":     api.GetPerMinute,
+				"default":     api.GetPerMinute,
+				"title":       "API lookups per minute",
+				"description": "MangaBaka allows 180 other requests a minute per IP. Lower it if other MangaBaka clients share your IP.",
+			},
+			"api_timeout_seconds": map[string]any{
+				"type":        "integer",
+				"minimum":     1,
+				"maximum":     300,
+				"default":     30,
+				"title":       "API timeout",
+				"description": "Seconds to wait for one API response.",
 			},
 			"checkpoint_every": map[string]any{
 				"type":        "integer",
