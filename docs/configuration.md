@@ -37,3 +37,9 @@ meta shows these as a form (the plugin publishes a JSON Schema) and sends them t
 ## Schedule
 
 The plugin suggests running the dump sync daily at 03:00 (`0 3 * * *`). MangaBaka builds its dump at 00:00 UTC. meta decides the real schedule. A sync whose dump hasn't changed since the last run ends at once without downloading anything.
+
+## Network profile
+
+The plugin declares meta's `network_profile` common service. meta hands it the network profile in effect for the `mangabaka` provider (configured in meta's admin: proxy or VPN container, challenge solver, rate limit, user agent, headers, timeouts), and every dump download and API call follows it. Without a profile the plugin connects directly with its own user agent.
+
+The plugin's own limits for MangaBaka's API still apply inside any profile: a profile can make the plugin slower, never faster than MangaBaka allows.

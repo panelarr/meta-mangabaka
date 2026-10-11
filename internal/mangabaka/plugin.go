@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -17,6 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	metadatav1 "github.com/panelarr/meta/gen/panelarr/metadata/v1"
+	"github.com/panelarr/meta/sdk/httpx"
 	"github.com/panelarr/meta/sdk/plugin"
 	"github.com/panelarr/meta/sdk/settings"
 
@@ -36,7 +36,10 @@ type Plugin struct {
 	plugin.Unimplemented
 
 	schema *settings.Schema
-	// HTTP is used for downloads; tests replace it.
+	// net follows the network profile meta hands the plugin.
+	net *httpx.Client
+	// HTTP is used for downloads and API calls: net's client unless tests
+	// replace it.
 	HTTP *http.Client
 
 	// APIHook, if set, adjusts each new API client (tests use it to fake
@@ -53,7 +56,14 @@ type Plugin struct {
 
 // New returns the plugin with default settings.
 func New() *Plugin {
-	p := &Plugin{schema: newSchema(), HTTP: defaultHTTPClient()}
+	net := httpx.New(httpx.Options{
+		UserAgent:      UserAgent(),
+		ConnectTimeout: 30 * time.Second,
+		// No overall timeout: a dump download takes minutes. Cancellation
+		// comes from the sync's context.
+		ReadTimeout: 60 * time.Second,
+	})
+	p := &Plugin{schema: newSchema(), net: net, HTTP: net.HTTP()}
 	s, values, err := parseSettings(p.schema, nil)
 	if err != nil {
 		panic(err)
@@ -62,13 +72,11 @@ func New() *Plugin {
 	return p
 }
 
-func defaultHTTPClient() *http.Client {
-	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.DialContext = (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}).DialContext
-	tr.ResponseHeaderTimeout = 60 * time.Second
-	// No overall timeout: a dump download takes minutes. Cancellation comes
-	// from the sync's context.
-	return &http.Client{Transport: tr}
+// SetNetworkProfile applies the network profile meta hands the plugin:
+// downloads and API calls go through its proxy, solver, limits and user
+// agent. An unset profile means a direct connection.
+func (p *Plugin) SetNetworkProfile(ctx context.Context, req *metadatav1.SetNetworkProfileRequest) (*metadatav1.SetNetworkProfileResponse, error) {
+	return p.net.SetNetworkProfile(ctx, req)
 }
 
 // Settings returns the settings in effect.
@@ -155,7 +163,7 @@ func (p *Plugin) GetInfo(context.Context, *metadatav1.GetInfoRequest) (*metadata
 		},
 		CommonServices: []*metadatav1.CommonService{{
 			Name:    "network_profile",
-			Purpose: "downloads and API calls through the hoster's proxy",
+			Purpose: "dump downloads and API calls go through the profile's proxy, solver, rate limit and user agent",
 		}},
 		Attribution: mapping.Attribution,
 	}}, nil

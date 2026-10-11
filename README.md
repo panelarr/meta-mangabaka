@@ -68,6 +68,10 @@ Then run a first sync from meta (`meta sync mangabaka`, or `POST /v1/admin/provi
 - [Dump ingestion](docs/dump.md) and [API lookups](docs/lookup.md)
 - [Field mapping](docs/mapping.md) from MangaBaka to meta's entry schema
 
+## Proxies and VPNs
+
+Downloads and API calls follow the network profile meta assigns to the provider (proxy or VPN container, challenge solver, rate limit, user agent). See [docs/configuration.md](docs/configuration.md#network-profile).
+
 ## MangaBaka data and its licence
 
 MangaBaka's data is published under **CC BY-NC-SA 4.0** (data that MangaBaka takes from other sites stays under those sites' terms). This plugin contains **no MangaBaka data**. It downloads the dump only when the person running it tells it to, keeps attribution on every record it produces, drops links MangaBaka marks as piracy, and respects MangaBaka's API rate limits. If you run it, you are responsible for using the data within that licence.

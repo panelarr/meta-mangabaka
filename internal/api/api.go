@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"github.com/panelarr/meta/sdk/httpx"
 )
 
 // DefaultBaseURL is MangaBaka's API.
@@ -227,6 +229,10 @@ func (c *Client) get(ctx context.Context, k Kind, path string, q url.Values) (*e
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
+			}
+			// An anti-bot challenge won't go away by retrying.
+			if httpx.IsChallenge(err) {
+				return nil, err
 			}
 			// Network trouble: retry like a 5xx.
 			if attempt >= c.MaxRetries {
