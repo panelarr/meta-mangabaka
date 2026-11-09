@@ -7,7 +7,7 @@ name: Dependency submission
 
 on:
   push:
-    branches: [main, ci/meta-mangabaka-go-dependency-submission]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
