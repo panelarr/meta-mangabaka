@@ -2,11 +2,11 @@ module github.com/panelarr/meta-mangabaka
 
 go 1.26.0
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 require (
 	github.com/google/go-cmp v0.7.0
-	github.com/klauspost/compress v1.20.1
+	github.com/klauspost/compress v1.20.2
 	github.com/panelarr/meta v0.0.0
 	golang.org/x/time v0.16.0
 	google.golang.org/protobuf v1.36.12
